@@ -15,7 +15,7 @@ public class LoadTest {
         ExecutorService es = Executors.newFixedThreadPool(100);
 
         RestTemplate rt = new RestTemplate();
-        final String url = "http://localhost:8080/restasyncEX4?idx={idx}";
+        final String url = "http://localhost:8080/restasyncEX5?idx={idx}";
 
         CyclicBarrier barrier = new CyclicBarrier(101);
 

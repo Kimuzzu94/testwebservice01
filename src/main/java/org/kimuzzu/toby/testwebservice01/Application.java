@@ -24,10 +24,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.request.async.DeferredResult;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter;
 import java.util.Queue;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -185,6 +182,29 @@ public class Application {
 
             return dr;
         }
+
+        //apply CompletableFuture
+        @GetMapping("/restasyncEX5")
+        public DeferredResult<String> restasyncEX5(int idx) {
+            DeferredResult<String> dr = new DeferredResult();
+
+            toCF(rtex.getForEntity(url, String.class, "hello" + idx))
+                    .thenCompose(s -> toCF(rtex.getForEntity(url2, String.class, s.getBody())))
+                    //.thenCompose(s -> toCF(myService.work(s.getBody())))
+                    .thenApplyAsync(s -> myService.workSync(s.getBody()))
+                    .thenAccept( s -> dr.setResult(s))
+                    .exceptionally( e -> {
+                        dr.setErrorResult(e.getMessage());
+                        return (Void)null;
+                    });
+            return dr;
+        }
+    }
+
+    static <T> CompletableFuture<T> toCF(ListenableFuture<T> lf) {
+        CompletableFuture<T> cf = new CompletableFuture<T>();
+        lf.addCallback( s -> cf.complete(s), e -> cf.completeExceptionally(e));
+        return cf;
     }
 
     public static class AcceptCompletion<S> extends Completion<S, Void> {
@@ -281,6 +301,10 @@ public class Application {
         @Async
         public ListenableFuture<String> work(String req) {
             return new AsyncResult<>(req + "/MyService");
+        }
+
+        public String workSync(String req) {
+            return req + "/MyServiceSync";
         }
     }
 
